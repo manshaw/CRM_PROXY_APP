@@ -183,6 +183,11 @@ app.get("*", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-app.listen(PORT, () => {
-  console.log(`CRM proxy app running at http://localhost:${PORT}`);
-});
+// Export for Vercel serverless; also start local server when run directly
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`CRM proxy app running at http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
