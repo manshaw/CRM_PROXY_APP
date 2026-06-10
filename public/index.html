@@ -130,6 +130,12 @@
       color: var(--text);
     }
 
+    button.danger {
+      background: var(--danger);
+    }
+
+    button.danger:hover { background: #8f1b12; }
+
     .status {
       margin-top: 14px;
       padding: 11px 13px;
@@ -274,7 +280,7 @@
       <div class="actions">
         <button id="previewBtn" type="button" disabled>Generate Preview</button>
         <button id="downloadBtn" class="secondary" type="button" disabled>Download JSON</button>
-        <button id="sendCallsBtn" type="button" disabled>Send Calls</button>
+        <button id="sendCallsBtn" class="danger" type="button" disabled>Send Calls</button>
       </div>
 
       <div id="previewStatus" class="status">
