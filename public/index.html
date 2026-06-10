@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM Call Sync Utility</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #172033;
+      --muted: #697386;
+      --border: #dfe5ee;
+      --primary: #2f6fed;
+      --primary-dark: #2458bd;
+      --success: #137a4b;
+      --danger: #b42318;
+      --warning-bg: #fff7e6;
+      --warning-border: #f5c26b;
+      --shadow: 0 8px 24px rgba(23, 32, 51, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+
+    .container {
+      width: min(1120px, calc(100% - 32px));
+      margin: 36px auto;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+    }
+
+    .subtitle {
+      margin: 0 0 24px;
+      color: var(--muted);
+    }
+
+    .notice {
+      margin-bottom: 20px;
+      padding: 14px 16px;
+      border: 1px solid var(--warning-border);
+      border-radius: 10px;
+      background: var(--warning-bg);
+      font-size: 14px;
+    }
+
+    .card {
+      margin-bottom: 20px;
+      padding: 22px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 {
+      margin: 0 0 18px;
+      font-size: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    label {
+      font-size: 14px;
+      font-weight: 650;
+    }
+
+    input, button {
+      min-height: 42px;
+      border-radius: 9px;
+      font: inherit;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.12);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    button {
+      padding: 10px 16px;
+      border: 0;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover { background: var(--primary-dark); }
+    button:disabled { cursor: not-allowed; opacity: 0.55; }
+
+    button.secondary {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+    }
+
+    .status {
+      margin-top: 14px;
+      padding: 11px 13px;
+      border-radius: 9px;
+      background: #f1f4f9;
+      color: var(--muted);
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+    }
+
+    .status.success {
+      background: #eaf8f0;
+      color: var(--success);
+    }
+
+    .status.error {
+      background: #fff0ee;
+      color: var(--danger);
+    }
+
+    .table-wrap {
+      max-height: 430px;
+      overflow: auto;
+      margin-top: 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f7f9fc;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>CRM Call Sync Utility</h1>
+    <p class="subtitle">Login, retrieve leads, and prepare a safe call schedule preview.</p>
+
+    <div class="notice">
+      This page generates a preview only. It does not create fabricated connected-call records.
+    </div>
+
+    <section class="card">
+      <h2>Section 1 — Login</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="username">Username</label>
+          <input id="username" autocomplete="username" placeholder="Enter username" />
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" placeholder="Enter password" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="loginBtn" type="button">Login</button>
+      </div>
+
+      <div id="loginStatus" class="status">Not logged in.</div>
+    </section>
+
+    <section class="card">
+      <h2>Section 2 — Fetch Leads</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="leadCount">Leads count / page size</label>
+          <input id="leadCount" type="number" min="1" step="1" inputmode="numeric" placeholder="Example: 500" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="fetchLeadsBtn" type="button" disabled>Fetch Leads</button>
+      </div>
+
+      <div id="leadStatus" class="status">Login first.</div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Lead ID</th>
+              <th>Phone Number</th>
+              <th>Name / Label</th>
+            </tr>
+          </thead>
+          <tbody id="leadsBody">
+            <tr><td colspan="4">No leads loaded.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="meta">
+        <span id="leadTotal">Loaded leads: 0</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Section 3 — Generate Call Preview</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="callCount">Number of random leads</label>
+          <input id="callCount" type="number" min="1" step="1" inputmode="numeric" placeholder="Example: 10" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="previewBtn" type="button" disabled>Generate Preview</button>
+        <button id="downloadBtn" class="secondary" type="button" disabled>Download JSON</button>
+        <button id="sendCallsBtn" type="button" disabled>Send Calls</button>
+      </div>
+
+      <div id="previewStatus" class="status">
+        Load leads first. Durations will be randomized from 36–59 seconds. Times will be non-overlapping and restricted to the previous four hours.
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Lead ID</th>
+              <th>Phone Number</th>
+              <th>Start Time</th>
+              <th>End Time</th>
+              <th>Duration</th>
+            </tr>
+          </thead>
+          <tbody id="previewBody">
+            <tr><td colspan="6">No preview generated.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    "use strict";
+
+    const API_BASE_URL = "/";
+
+    let loggedInUsername = "";
+    let leads = [];
+    let previewRows = [];
+
+    const $ = (id) => document.getElementById(id);
+
+    function setStatus(element, message, type = "") {
+      element.className = `status${type ? " " + type : ""}`;
+      element.textContent = message;
+    }
+
+    function positiveInteger(input, label) {
+      const value = Number(input.value);
+
+      if (!Number.isInteger(value) || value < 1) {
+        throw new Error(`${label} must be a positive whole number.`);
+      }
+
+      return value;
+    }
+
+    function textValue(obj, keys) {
+      for (const key of keys) {
+        const value = obj?.[key];
+        if (value !== undefined && value !== null && String(value).trim() !== "") {
+          return String(value).trim();
+        }
+      }
+      return "";
+    }
+
+    function normalizeLead(raw) {
+      return {
+        raw,
+        leadId: textValue(raw, ["lead_id", "leadId", "id"]),
+        phoneNumber: textValue(raw, [
+          "phone_number",
+          "phoneNumber",
+          "phone",
+          "mobile",
+          "mobile_number",
+          "contact_number"
+        ]),
+        label: textValue(raw, [
+          "name",
+          "lead_name",
+          "leadName",
+          "customer_name",
+          "title"
+        ])
+      };
+    }
+
+    function formatLocalDate(date) {
+      const pad = (n) => String(n).padStart(2, "0");
+
+      return [
+        date.getFullYear(),
+        pad(date.getMonth() + 1),
+        pad(date.getDate())
+      ].join("-") + " " + [
+        pad(date.getHours()),
+        pad(date.getMinutes()),
+        pad(date.getSeconds())
+      ].join(":");
+    }
+
+    function formatDuration(seconds) {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+
+      return [hours, minutes, secs]
+        .map((value) => String(value).padStart(2, "0"))
+        .join(":");
+    }
+
+    function randomInteger(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function shuffledCopy(items) {
+      const copy = [...items];
+
+      for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+
+      return copy;
+    }
+
+    async function login() {
+      const username = $("username").value.trim();
+      const password = $("password").value;
+
+      if (!username || !password) {
+        setStatus($("loginStatus"), "Username and password are required.", "error");
+        return;
+      }
+
+      $("loginBtn").disabled = true;
+      setStatus($("loginStatus"), "Logging in...");
+
+      try {
+        const body = new URLSearchParams({
+          user_name: username,
+          password
+        });
+
+        const response = await fetch(`${API_BASE_URL}checkuserlogin.php`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+          },
+          body
+        });
+
+        const raw = await response.text();
+        let data;
+
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          throw new Error(`Non-JSON login response: ${raw.slice(0, 300)}`);
+        }
+
+        if (!response.ok || data.success !== true) {
+          throw new Error(data.message || `Login failed with HTTP ${response.status}.`);
+        }
+
+        loggedInUsername = data.username || username;
+        $("fetchLeadsBtn").disabled = false;
+
+        setStatus(
+          $("loginStatus"),
+          `Success\nUser: ${loggedInUsername}\nUser ID: ${data.user_id ?? "not returned"}\nMessage: ${data.message ?? "Login successful"}`,
+          "success"
+        );
+      } catch (error) {
+        loggedInUsername = "";
+        $("fetchLeadsBtn").disabled = true;
+        $("previewBtn").disabled = true;
+
+        setStatus(
+          $("loginStatus"),
+          `Login failed: ${error.message}`,
+          "error"
+        );
+      } finally {
+        $("loginBtn").disabled = false;
+      }
+    }
+
+    async function fetchLeads() {
+      try {
+        if (!loggedInUsername) {
+          throw new Error("Login first.");
+        }
+
+        const limit = positiveInteger($("leadCount"), "Leads count");
+        $("fetchLeadsBtn").disabled = true;
+        setStatus($("leadStatus"), "Fetching leads...");
+
+        const url = new URL(`${window.location.origin}${API_BASE_URL}get_leads.php`);
+        url.searchParams.set("username", loggedInUsername);
+        url.searchParams.set("limit", String(limit));
+
+        const response = await fetch(url, {
+          method: "GET"
+        });
+
+        const raw = await response.text();
+        let data;
+
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          throw new Error(`Non-JSON leads response: ${raw.slice(0, 300)}`);
+        }
+
+        const ok = data.status === true || data.success === true;
+        if (!response.ok || !ok) {
+          throw new Error(data.message || `Lead request failed with HTTP ${response.status}.`);
+        }
+
+        const rows = Array.isArray(data.data) ? data.data : [];
+
+        leads = rows
+          .map(normalizeLead)
+          .filter((lead) => lead.leadId && lead.phoneNumber);
+
+        renderLeads();
+
+        $("previewBtn").disabled = leads.length === 0;
+
+        setStatus(
+          $("leadStatus"),
+          `Success\nReceived objects: ${rows.length}\nUsable lead/phone pairs: ${leads.length}\nHas more: ${Boolean(data.has_more)}\nNext cursor: ${data.next_cursor_id ?? "none"}`,
+          "success"
+        );
+      } catch (error) {
+        leads = [];
+        renderLeads();
+        $("previewBtn").disabled = true;
+        setStatus($("leadStatus"), `Fetch failed: ${error.message}`, "error");
+      } finally {
+        $("fetchLeadsBtn").disabled = !loggedInUsername;
+      }
+    }
+
+    function renderLeads() {
+      const body = $("leadsBody");
+      body.innerHTML = "";
+
+      if (leads.length === 0) {
+        body.innerHTML = '<tr><td colspan="4">No usable leads loaded.</td></tr>';
+      } else {
+        const fragment = document.createDocumentFragment();
+
+        leads.forEach((lead, index) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${escapeHtml(lead.leadId)}</td>
+            <td>${escapeHtml(lead.phoneNumber)}</td>
+            <td>${escapeHtml(lead.label || "—")}</td>
+          `;
+          fragment.appendChild(row);
+        });
+
+        body.appendChild(fragment);
+      }
+
+      $("leadTotal").textContent = `Loaded leads: ${leads.length}`;
+    }
+
+    function generatePreview() {
+      try {
+        if (leads.length === 0) {
+          throw new Error("Fetch leads first.");
+        }
+
+        const count = positiveInteger($("callCount"), "Call count");
+
+        if (count > leads.length) {
+          throw new Error(`Call count cannot exceed the ${leads.length} loaded usable leads.`);
+        }
+
+        const selected = shuffledCopy(leads).slice(0, count);
+
+        const now = new Date();
+        const windowStart = new Date(now.getTime() - 4 * 60 * 60 * 1000);
+        const gapSeconds = 5;
+        const durations = selected.map(() => randomInteger(36, 59));
+        const requiredSeconds =
+          durations.reduce((sum, value) => sum + value, 0) +
+          gapSeconds * Math.max(0, count - 1);
+
+        const availableSeconds = Math.floor((now - windowStart) / 1000);
+
+        if (requiredSeconds > availableSeconds) {
+          throw new Error(
+            `Too many calls for a four-hour non-overlapping window. Required: ${requiredSeconds} seconds.`
+          );
+        }
+
+        const latestStartOffset = availableSeconds - requiredSeconds;
+        const initialOffset = randomInteger(0, Math.max(0, latestStartOffset));
+
+        let cursor = new Date(windowStart.getTime() + initialOffset * 1000);
+
+        previewRows = selected.map((lead, index) => {
+          const durationSeconds = durations[index];
+          const start = new Date(cursor);
+          const end = new Date(start.getTime() + durationSeconds * 1000);
+
+          cursor = new Date(end.getTime() + gapSeconds * 1000);
+
+          return {
+            phone_number: lead.phoneNumber,
+            lead_id: lead.leadId,
+            username: loggedInUsername,
+            call_start_time: formatLocalDate(start),
+            call_end_time: formatLocalDate(end),
+            call_duration: formatDuration(durationSeconds),
+            duration_seconds: durationSeconds
+          };
+        });
+
+        renderPreview();
+        $('downloadBtn').disabled = false;
+        $('sendCallsBtn').disabled = false;
+
+        setStatus(
+          $('previewStatus'),
+          `Generated ${previewRows.length} non-overlapping call records. Click "Send Calls" to submit them (5 s delay between each).`,
+          'success'
+        );
+      } catch (error) {
+        previewRows = [];
+        renderPreview();
+        $('downloadBtn').disabled = true;
+        $('sendCallsBtn').disabled = true;
+        setStatus($('previewStatus'), `Preview failed: ${error.message}`, 'error');
+      }
+    }
+
+    function renderPreview() {
+      const body = $("previewBody");
+      body.innerHTML = "";
+
+      if (previewRows.length === 0) {
+        body.innerHTML = '<tr><td colspan="6">No preview generated.</td></tr>';
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+
+      previewRows.forEach((item, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${escapeHtml(item.lead_id)}</td>
+          <td>${escapeHtml(item.phone_number)}</td>
+          <td>${escapeHtml(item.call_start_time)}</td>
+          <td>${escapeHtml(item.call_end_time)}</td>
+          <td>${escapeHtml(item.call_duration)}</td>
+        `;
+        fragment.appendChild(row);
+      });
+
+      body.appendChild(fragment);
+    }
+
+    async function sendCalls() {
+      if (previewRows.length === 0) {
+        setStatus($('previewStatus'), 'Generate a preview first.', 'error');
+        return;
+      }
+
+      const total = previewRows.length;
+      let sent = 0;
+
+      $('sendCallsBtn').disabled = true;
+      $('previewBtn').disabled = true;
+      $('downloadBtn').disabled = true;
+
+      try {
+        for (let i = 0; i < total; i++) {
+          const row = previewRows[i];
+
+          setStatus(
+            $('previewStatus'),
+            `Sending ${i + 1} of ${total}…\nLead ID: ${row.lead_id} | Phone: ${row.phone_number}`,
+            ''
+          );
+
+          const body = new URLSearchParams({
+            phone_number: row.phone_number,
+            call_start_time: row.call_start_time,
+            call_end_time: row.call_end_time,
+            call_duration: row.call_duration,
+            username: row.username,
+            lead_id: row.lead_id
+          });
+
+          const response = await fetch(`${API_BASE_URL}save_call_tele.php`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+            body
+          });
+
+          const raw = await response.text();
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status} on record ${i + 1}: ${raw.slice(0, 200)}`);
+          }
+
+          sent += 1;
+
+          if (i < total - 1) {
+            setStatus(
+              $('previewStatus'),
+              `Sent ${sent} of ${total}. Waiting 5 s before next…`,
+              ''
+            );
+            await new Promise((resolve) => setTimeout(resolve, 5000));
+          }
+        }
+
+        setStatus(
+          $('previewStatus'),
+          `Done. Successfully sent ${sent} of ${total} call record(s) to save_call_tele.php.`,
+          'success'
+        );
+      } catch (error) {
+        setStatus(
+          $('previewStatus'),
+          `Stopped after ${sent} of ${total}: ${error.message}`,
+          'error'
+        );
+      } finally {
+        $('sendCallsBtn').disabled = false;
+        $('previewBtn').disabled = leads.length === 0;
+        $('downloadBtn').disabled = previewRows.length === 0;
+      }
+    }
+
+    function downloadPreview() {
+      if (previewRows.length === 0) return;
+
+      const blob = new Blob(
+        [JSON.stringify({ calls: previewRows }, null, 2)],
+        { type: "application/json" }
+      );
+
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+
+      anchor.href = url;
+      anchor.download = `crm-call-preview-${Date.now()}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+
+      URL.revokeObjectURL(url);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    $('loginBtn').addEventListener('click', login);
+    $('fetchLeadsBtn').addEventListener('click', fetchLeads);
+    $('previewBtn').addEventListener('click', generatePreview);
+    $('downloadBtn').addEventListener('click', downloadPreview);
+    $('sendCallsBtn').addEventListener('click', sendCalls);
+  </script>
+</body>
+</html>
